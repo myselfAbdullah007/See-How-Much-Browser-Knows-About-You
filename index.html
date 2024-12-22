@@ -490,6 +490,16 @@
         }
 
         function updateUI(userData) {
+            // Store currently open panels before updating
+            const panels = document.querySelectorAll('.section');
+            panels.forEach(panel => {
+                const content = panel.querySelector('.section-content');
+                const header = panel.querySelector('.section-header');
+                if (content.classList.contains('active')) {
+                    // Store the section title as identifier
+                    activePanels.add(header.querySelector('h2').textContent);
+                }
+            });
             // Update online status
             const statusBadge = document.getElementById("onlineStatus");
             statusBadge.className = "status-badge " + (userData.networkInfo.onlineStatus === "Online" ? "status-online" : "status-offline");
@@ -535,6 +545,12 @@
                 header.addEventListener('click', () => {
                     header.classList.toggle('active');
                     content.classList.toggle('active');
+                      // Update active panels tracking
+                    if (content.classList.contains('active')) {
+                        activePanels.add(formattedSectionName);
+                    } else {
+                        activePanels.delete(formattedSectionName);
+                    }
                 });
             });
         }
