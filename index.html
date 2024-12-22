@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Reconnaissance</title>
+    <style>
+        @keyframes glitch {
+            0% { text-shadow: 2px 0 #0f0, -2px 0 #f00; }
+            25% { text-shadow: -2px 0 #0f0, 2px 0 #f00; }
+            50% { text-shadow: 2px 0 #f00, -2px 0 #0f0; }
+            75% { text-shadow: -2px 0 #f00, 2px 0 #0f0; }
+            100% { text-shadow: 2px 0 #0f0, -2px 0 #f00; }
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100vh); }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #0a0a0a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+            margin: 0;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 0, 0.03),
+                rgba(0, 255, 0, 0.03) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            animation: scanline 10s linear infinite;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .data {
+            background: rgba(0, 20, 0, 0.8);
+            border: 1px solid #00ff00;
+            padding: 25px;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        h1 {
+            color: #00ff00;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            animation: blink 2s infinite;
+            flex-wrap: wrap;
+            line-height: 1.5;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 2px;
+            font-size: 14px;
+            font-weight: bold;
+            border: 1px solid currentColor;
+            white-space: nowrap;
+            margin: 4px 0;
+        }
+
+        .status-online {
+            background-color: rgba(0, 255, 0, 0.1);
+            color: #00ff00;
+        }
+
+        .status-offline {
+            background-color: rgba(255, 0, 0, 0.1);
+            color: #ff0000;
+        }
+
+        .section {
+            margin-bottom: 15px;
+            border: 1px solid #00ff00;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background-color: rgba(0, 255, 0, 0.1);
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .section-header:hover {
+            background-color: rgba(0, 255, 0, 0.2);
+            text-shadow: 0 0 8px #00ff00;
+        }
+
+        .section-header h2 {
+            margin: 0;
+            font-size: 1.1em;
+            color: #00ff00;
+            text-transform: uppercase;
+        }
+
+        .section-content {
+            padding: 20px;
+            display: none;
+            border-top: 1px solid #00ff00;
+            background: rgba(0, 20, 0, 0.5);
+        }
+
+        .section-content.active {
+            display: block;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .info-item {
+            background: rgba(0, 20, 0, 0.7);
+            padding: 12px;
+            border-radius: 2px;
+            border: 1px solid rgba(0, 255, 0, 0.3);
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #00ff00;
+            margin-bottom: 4px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+
+        .info-value {
+            word-break: break-word;
+            font-size: 0.95em;
+            color: #33ff33;
+        }
+
+        .copy-button {
+            background-color: rgba(0, 255, 0, 0.1);
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 8px 16px;
+            border-radius: 2px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .copy-button:hover {
+            background-color: rgba(0, 255, 0, 0.2);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .timestamp {
+            font-size: 0.8em;
+            color: #00ff00;
+            margin-top: 20px;
+            text-align: right;
+            opacity: 0.7;
+        }
+
+        /* Add terminal prefix to each info label */
+        .info-label::before {
+            content: "> ";
+            color: #00ff00;
+        }
+
+        /* Add scanning effect to values */
+        .info-value {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .info-value::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(0, 255, 0, 0.2) 50%,
+                transparent 100%
+            );
+            animation: scan 2s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5em; 
+                gap: 8px; 
+            }
+
+            .data {
+                padding: 15px; 
+            }
+
+            .status-badge {
+                padding: 2px 8px; 
+            }
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            border-top: 1px solid rgba(0, 255, 0, 0.3);
+            padding-top: 15px;
+        }
+
+        .github-link {
+            color: #00ff00;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s ease;
+            position: relative;
+            padding: 5px 10px;
+        }
+
+        .github-link:hover {
+            text-shadow: 0 0 8px #00ff00;
+        }
+
+        .github-link::before {
+            content: "[ ";
+            opacity: 0.7;
+        }
+
+        .github-link::after {
+            content: " ]";
+            opacity: 0.7;
+        }
+
+        /* GitHub icon style */
+        .github-icon {
+            width: 16px;
+            height: 16px;
+            fill: #00ff00;
+        }
+
+        @media (max-width: 480px) {
+            .footer {
+                margin-top: 15px;
+                padding-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="data">
+            <h1>SEE WHAT THE BROWSER KNOWS ABOUT YOU! <span id="onlineStatus" class="status-badge"></span></h1>
+            <button class="copy-button" onclick="copyToClipboard()">Extract Data</button>
+            <div id="sections-container"></div>
+            <div class="timestamp">Terminal Session: <span id="updateTimestamp"></span></div>
+            <div class="footer">
+                <a href="https://github.com/myselfAbdullah007" target="_blank" class="github-link">
+                    <svg class="github-icon" viewBox="0 0 16 16">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                    </svg>
+                    myselfAbdullah007
+                </a>
+            </div>
+        </div>
+    </div>
+    <script>
+        function getUserData() {
+            const userData = {
+                browserInfo: {
+                    userAgent: navigator.userAgent,
+                    platform: navigator.platform,
+                    browserName: detectBrowser(),
+                    browserVersion: detectBrowserVersion(),
+                    vendor: navigator.vendor,
+                    appVersion: navigator.appVersion,
+                    appName: navigator.appName,
+                    appCodeName: navigator.appCodeName,
+                    doNotTrack: navigator.doNotTrack || "unspecified",
+                    pdfViewerEnabled: navigator.pdfViewerEnabled || false,
+                    webdriver: navigator.webdriver || false,
+                    productSub: navigator.productSub,
+                    buildID: navigator.buildID,
+                    oscpu: navigator.oscpu || "Unknown"
+                },
+                displayInfo: {
+                    screenWidth: `${window.screen.width}px`,
+                    screenHeight: `${window.screen.height}px`,
+                    availableScreenWidth: `${window.screen.availWidth}px`,
+                    availableScreenHeight: `${window.screen.availHeight}px`,
+                    colorDepth: `${window.screen.colorDepth}-bit`,
+                    pixelRatio: window.devicePixelRatio,
+                    orientation: screen.orientation ? screen.orientation.type : "Unknown",
+                    viewportWidth: `${window.innerWidth}px`,
+                    viewportHeight: `${window.innerHeight}px`,
+                    screenLeft: window.screenLeft || window.screenX,
+                    screenTop: window.screenTop || window.screenY
+                },
+                systemInfo: {
+                    platform: navigator.platform,
+                    cpuCores: navigator.hardwareConcurrency || "Unknown",
+                    deviceMemory: navigator.deviceMemory ? `${navigator.deviceMemory}GB` : "Unknown",
+                    maxTouchPoints: navigator.maxTouchPoints,
+                    language: navigator.language,
+                    languages: navigator.languages ? navigator.languages.join(", ") : "Unknown"
+                },
+                networkInfo: {
+                    onlineStatus: navigator.onLine ? "Online" : "Offline",
+                    protocol: window.location.protocol,
+                    hostname: window.location.hostname,
+                    port: window.location.port,
+                    connection: getNetworkInfo()
+                },
+                mediaSupport: {
+                    audioSupport: "AudioContext" in window,
+                    videoSupport: "MediaRecorder" in window,
+                    webRTCSupport: "RTCPeerConnection" in window,
+                    audioFormats: getAudioSupport(),
+                    videoFormats: getVideoSupport()
+                },
+                featureSupport: {
+                    cookies: navigator.cookieEnabled,
+                    localStorage: typeof localStorage !== "undefined",
+                    sessionStorage: typeof sessionStorage !== "undefined",
+                    webGL: getWebGLSupport(),
+                    webWorkers: typeof Worker !== "undefined",
+                    serviceWorkers: "serviceWorker" in navigator,
+                    webAssembly: typeof WebAssembly === "object",
+                    geolocation: "geolocation" in navigator,
+                    bluetooth: "bluetooth" in navigator,
+                    usb: "usb" in navigator,
+                    touchSupport: getTouchSupport()
+                },
+                performance: getPerformanceInfo(),
+                security: {
+                    https: window.location.protocol === "https:",
+                    cookiesEnabled: navigator.cookieEnabled,
+                    privateMode: isPrivateMode()
+                },
+                dateTime: {
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    timezoneOffset: new Date().getTimezoneOffset(),
+                    currentTime: new Date().toISOString(),
+                    localTime: new Date().toLocaleString()
+                },
+                documentInfo: {
+                    title: document.title,
+                    referrer: document.referrer || "Direct Access",
+                    characterSet: document.characterSet,
+                    lastModified: document.lastModified,
+                    readyState: document.readyState,
+                    domain: document.domain
+                }
+            };
+
+            updateUI(userData);
+            return userData;
+        }
+
+        function detectBrowser() {
+            const ua = navigator.userAgent;
+            if (ua.includes("Firefox")) return "Firefox";
+            if (ua.includes("Chrome") && !ua.includes("Edg")) return "Chrome";
+            if (ua.includes("Safari") && !ua.includes("Chrome")) return "Safari";
+            if (ua.includes("Edge") || ua.includes("Edg")) return "Edge";
+            if (ua.includes("Opera") || ua.includes("OPR")) return "Opera";
+            return "Unknown";
+        }
+
+        function detectBrowserVersion() {
+            const ua = navigator.userAgent;
+            const match = ua.match(/(Firefox|Chrome|Safari|Edg|OPR)[\/\s](\d+)/);
+            return match ? match[2] : "Unknown";
+        }
+
+        function getNetworkInfo() {
+            if ("connection" in navigator) {
+                const conn = navigator.connection;
+                return {
+                    type: conn.effectiveType || "Unknown",
+                    downlink: conn.downlink ? `${conn.downlink} Mbps` : "Unknown",
+                    rtt: conn.rtt ? `${conn.rtt} ms` : "Unknown",
+                    saveData: conn.saveData || false
+                };
+            }
+            return "Not Available";
+        }
+
+        function getAudioSupport() {
+            const audio = document.createElement("audio");
+            return {
+                mp3: audio.canPlayType("audio/mpeg") || "no",
+                wav: audio.canPlayType("audio/wav") || "no",
+                ogg: audio.canPlayType("audio/ogg") || "no",
+                aac: audio.canPlayType("audio/aac") || "no"
+            };
+        }
+
+        function getVideoSupport() {
+            const video = document.createElement("video");
+            return {
+                mp4: video.canPlayType("video/mp4") || "no",
+                webm: video.canPlayType("video/webm") || "no",
+                ogg: video.canPlayType("video/ogg") || "no"
+            };
+        }
+
+        function getWebGLSupport() {
+            const canvas = document.createElement("canvas");
+            const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+            if (gl) {
+                return {
+                    supported: true,
+                    vendor: gl.getParameter(gl.VENDOR),
+                    renderer: gl.getParameter(gl.RENDERER)
+                };
+            }
+            return { supported: false };
+        }
+
+        function getTouchSupport() {
+            return {
+                maxTouchPoints: navigator.maxTouchPoints,
+                touchEvents: "ontouchstart" in window,
+                touchscreen: navigator.maxTouchPoints > 0
+            };
+        }
+
+        function getPerformanceInfo() {
+            if (!window.performance) return "Not Available";
+            
+            return {
+                timeOrigin: performance.timeOrigin,
+                navigation: performance.getEntriesByType("navigation").length,
+                resources: performance.getEntriesByType("resource").length
+            };
+        }
+
+        function isPrivateMode() {
+            try {
+                localStorage.test = 1;
+                localStorage.removeItem("test");
+                return false;
+            } catch (e) {
+                return true;
+            }
+        }
+
+        function updateUI(userData) {
+            // Update online status
+            const statusBadge = document.getElementById("onlineStatus");
+            statusBadge.className = "status-badge " + (userData.networkInfo.onlineStatus === "Online" ? "status-online" : "status-offline");
+            statusBadge.textContent = userData.networkInfo.onlineStatus;
+
+            // Update timestamp
+            document.getElementById("updateTimestamp").textContent = new Date().toLocaleString();
+
+            // Create sections
+            const sectionsContainer = document.getElementById("sections-container");
+            sectionsContainer.innerHTML = '';
+
+            Object.entries(userData).forEach(([sectionName, sectionData]) => {
+                const section = document.createElement('div');
+                section.className = 'section';
+                
+                const formattedSectionName = sectionName
+                    .replace(/([A-Z])/g, ' $1')
+                    .replace(/^./, str => str.toUpperCase());
+
+                section.innerHTML = `
+                    <div class="section-header">
+                        <h2>${formattedSectionName}</h2>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="info-grid">
+                            ${Object.entries(sectionData).map(([key, value]) => `
+                                <div class="info-item">
+                                    <div class="info-label">${formatLabel(key)}</div>
+                                    <div class="info-value">${formatValue(value)}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+
+                sectionsContainer.appendChild(section);
+
+                // Add click handler
+                const header = section.querySelector('.section-header');
+                const content = section.querySelector('.section-content');
+                header.addEventListener('click', () => {
+                    header.classList.toggle('active');
+                    content.classList.toggle('active');
+                });
+            });
+        }
+
+        function formatLabel(str) {
+            return str
+                .replace(/([A-Z])/g, ' $1')
+                .replace(/^./, str => str.toUpperCase())
+                .replace(/_/g, ' ');
+        }
+
+        function formatValue(value) {
+            if (value === null || value === undefined) return 'Not available';
+            if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+            if (typeof value === 'object') {
+                return Object.entries(value)
+                    .map(([k, v]) => `${formatLabel(k)}: ${v}`)
+                    .join('<br>');
+            }
+            return value.toString();
+        }
+
+        function copyToClipboard() {
+            const userData = getUserData();
+            const formattedData = JSON.stringify(userData, null, 2);
+            navigator.clipboard.writeText(formattedData)
+                .then(() => alert('Data copied to clipboard!'))
+                .catch(err => console.error('Failed to copy:', err));
+        }
+
+        // Monitor online status
+        window.addEventListener('online', getUserData);
+        window.addEventListener('offline', getUserData);
+
+        // Execute user data function on load
+        getUserData();
+
+        // Refresh data periodically (every 5 seconds)
+        setInterval(getUserData, 5000);
+    </script>
+</body>
+</html>
